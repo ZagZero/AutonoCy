@@ -18,7 +18,7 @@ namespace AutonoCy
 
     public class Return : SystemException
     {
-        readonly object value;
+        public readonly object value;
 
         public Return(object value) : base()
         {
