@@ -1,0 +1,19 @@
+int a = "global a";
+int b = "global b";
+int c = "global c";
+{
+  int a = "outer a";
+  int b = "outer b";
+  {
+    int a = "inner a";
+    print a;
+    print b;
+    print c;
+  }
+  print a;
+  print b;
+  print c;
+}
+print a;
+print b;
+print c;

@@ -1,0 +1,7 @@
+C:\Users\Zee\source\repos\AutonoC\AutonoC\bin\Debug\AutonoCy.exe.config
+C:\Users\Zee\source\repos\AutonoC\AutonoC\bin\Debug\AutonoCy.exe
+C:\Users\Zee\source\repos\AutonoC\AutonoC\bin\Debug\AutonoCy.pdb
+C:\Users\Zee\source\repos\AutonoC\AutonoC\obj\Debug\AutonoCy.csprojAssemblyReference.cache
+C:\Users\Zee\source\repos\AutonoC\AutonoC\obj\Debug\AutonoCy.csproj.CoreCompileInputs.cache
+C:\Users\Zee\source\repos\AutonoC\AutonoC\obj\Debug\AutonoCy.exe
+C:\Users\Zee\source\repos\AutonoC\AutonoC\obj\Debug\AutonoCy.pdb
