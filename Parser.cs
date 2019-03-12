@@ -119,7 +119,7 @@ namespace AutonoCy
             {
                 initializer = null;
             }
-            else if (match(TokenTypes.INT, TokenTypes.FLOAT))
+            else if (match(TokenTypes.INT, TokenTypes.FLOAT, TokenTypes.VAR))
             {
                 initializer = varDeclaration();
             }

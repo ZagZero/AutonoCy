@@ -1,8 +1,19 @@
+var count = 0;
+var timeS = 0;
+var timeE = 0;
+
 fun fibonacci(n) {
+  count = count + 1;
   if (n <= 1) return n;
   return fibonacci(n - 2) + fibonacci(n - 1);
 }
 
-//for (var i = 0; i < 20; i = i + 1) {
-  print fibonacci(10);
-//}
+for (var i = 0; i < 20; i = i + 1) {
+  count = 0;
+  timeS = clock();
+  print fibonacci(i);
+  timeE = clock();
+  var deltaT = timeE - timeS;
+  print deltaT; 
+  print "(ms)";
+}
