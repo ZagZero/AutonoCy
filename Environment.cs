@@ -52,7 +52,8 @@ namespace AutonoCy
 
         public void define (string name, object value)
         {
-            values.Add(name, value);
+            // Check type before just allowing it to be overwritten
+            values[name] = value;
         }
     }
 }

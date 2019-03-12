@@ -31,9 +31,9 @@ namespace AutonoCy
         {
             try
             {
-                Token typeHold = peek();
-                if (match(TokenTypes.INT, TokenTypes.FLOAT, TokenTypes.STRING, TokenTypes.BOOL))
-                    return varDeclaration(typeHold);
+                if (match(TokenTypes.FUN)) return function("function");
+                if (match(TokenTypes.INT, TokenTypes.FLOAT, TokenTypes.STRING, TokenTypes.BOOL, TokenTypes.VAR))
+                    return varDeclaration();
                 return statement();
             }
             catch (ParseError e)
@@ -43,8 +43,34 @@ namespace AutonoCy
             }
         }
 
-        private Stmt varDeclaration(Token typeHold)
+        private Stmt.Function function(string kind)
         {
+            Token name = consume(TokenTypes.IDENTIFIER, "Expect " + kind + " name.");
+            consume(TokenTypes.LEFT_PAREN, "Expect '(' after " + kind + " name.");
+            List<Token> parameters = new List<Token>();
+
+            if (!check(TokenTypes.RIGHT_PAREN))
+            {
+                do
+                {
+                    if (parameters.Count() >= 16)
+                    {
+                        error(peek(), "Cannot have more than 16 parameters.");
+                    }
+
+                    parameters.Add(consume(TokenTypes.IDENTIFIER, "Expected parameter name."));
+                } while (match(TokenTypes.COMMA));
+            }
+            consume(TokenTypes.RIGHT_PAREN, "Expect ')' after parameters.");
+
+            consume(TokenTypes.LEFT_BRACE, "Expect '{' before " + kind + " body.");
+            List<Stmt> body = block();
+            return new Stmt.Function(name, parameters, body);
+        }
+
+        private Stmt varDeclaration()
+        {
+            Token typeHold = previous();
             Token name = consume(TokenTypes.IDENTIFIER, "Expect variable name.");
 
             Expr initializer = null;
@@ -64,8 +90,10 @@ namespace AutonoCy
                     return new Stmt.Int(name, initializer);
                 case TokenTypes.STRING:
                     return new Stmt.String(name, initializer);
+                case TokenTypes.VAR:
+                    return new Stmt.Var(name, initializer);
                 default:
-                    throw error(typeHold, "Unhandled type, interpreter shouldn't let this happen");
+                    throw error(typeHold, "Unhandled type, interpreter shouldn't let this happen.");
             }
         }
 
@@ -75,6 +103,7 @@ namespace AutonoCy
             if (match(TokenTypes.IF)) return ifStatement();
             if (match(TokenTypes.PRINT)) return printStatement(false);
             if (match(TokenTypes.PRINT_ERR)) return printStatement(true);
+            if (match(TokenTypes.RETURN)) return returnStatement();
             if (match(TokenTypes.WHILE)) return whileStatement();
             if (match(TokenTypes.LEFT_BRACE)) return new Stmt.Block(block());
 
@@ -92,7 +121,7 @@ namespace AutonoCy
             }
             else if (match(TokenTypes.INT, TokenTypes.FLOAT))
             {
-                initializer = varDeclaration(previous());
+                initializer = varDeclaration();
             }
             else
             {
@@ -170,6 +199,19 @@ namespace AutonoCy
             Expr value = expression();
             consume(TokenTypes.SEMICOLON, "Expect ';' after value.");
             return new Stmt.Expression(value);
+        }
+
+        private Stmt returnStatement()
+        {
+            Token keyword = previous();
+            Expr value = null;
+            if (!check(TokenTypes.SEMICOLON))
+            {
+                value = expression();
+            }
+
+            consume(TokenTypes.SEMICOLON, "Expect ';' after return value.");
+            return new Stmt.Return(keyword, value);
         }
 
         private List<Stmt> block()
@@ -318,7 +360,46 @@ namespace AutonoCy
                 return new Expr.Unary(op, right);
             }
 
-            return primary();
+            return call();
+        }
+
+        private Expr finishCall(Expr callee)
+        {
+            List<Expr> arguments = new List<Expr>();
+            if (!check(TokenTypes.RIGHT_PAREN))
+            {
+                do
+                {
+                    if (arguments.Count >= 16)
+                    {
+                        error(peek(), "Cannot have more that 16 arguments.");
+                    }
+                    arguments.Add(expression());
+                } while (match(TokenTypes.COMMA));
+            }
+
+            Token paren = consume(TokenTypes.RIGHT_PAREN, "Expect ')' after arguments.");
+
+            return new Expr.Call(callee, paren, arguments);
+        }
+
+        private Expr call()
+        {
+            Expr expr = primary();
+
+            while (true)
+            {
+                if (match(TokenTypes.LEFT_PAREN))
+                {
+                    expr = finishCall(expr);
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            return expr;
         }
 
         private Expr primary()

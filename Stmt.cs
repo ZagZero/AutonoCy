@@ -6,6 +6,7 @@ namespace AutonoCy
 		public interface Visitor<R> {
 			R visitBlockStmt(Block stmt);
 			R visitExpressionStmt(Expression stmt);
+			R visitFunctionStmt(Function stmt);
 			R visitIfStmt(If stmt);
 			R visitPrintStmt(Print stmt);
 			R visitPrint_ErrStmt(Print_Err stmt);
@@ -13,6 +14,8 @@ namespace AutonoCy
 			R visitFloatStmt(Float stmt);
 			R visitStringStmt(String stmt);
 			R visitBoolStmt(Bool stmt);
+			R visitReturnStmt(Return stmt);
+			R visitVarStmt(Var stmt);
 			R visitWhileStmt(While stmt);
 		}
 		public class Block : Stmt {
@@ -36,6 +39,21 @@ namespace AutonoCy
 				return visitor.visitExpressionStmt(this);
 			}
 			public readonly Expr expression;
+		}
+		public class Function : Stmt {
+			public Function(Token name, List<Token> parameters, List<Stmt> body) {
+				this.name = name;
+				this.parameters = parameters;
+				this.body = body;
+			}
+
+
+			public override R accept<R>(Visitor<R> visitor) {
+				return visitor.visitFunctionStmt(this);
+			}
+			public readonly Token name;
+			public readonly List<Token> parameters;
+			public readonly List<Stmt> body;
 		}
 		public class If : Stmt {
 			public If(Expr condition, Stmt thenBranch, Stmt elseBranch) {
@@ -122,6 +140,32 @@ namespace AutonoCy
 
 			public override R accept<R>(Visitor<R> visitor) {
 				return visitor.visitBoolStmt(this);
+			}
+			public readonly Token name;
+			public readonly Expr initializer;
+		}
+		public class Return : Stmt {
+			public Return(Token keyword, Expr value) {
+				this.keyword = keyword;
+				this.value = value;
+			}
+
+
+			public override R accept<R>(Visitor<R> visitor) {
+				return visitor.visitReturnStmt(this);
+			}
+			public readonly Token keyword;
+			public readonly Expr value;
+		}
+		public class Var : Stmt {
+			public Var(Token name, Expr initializer) {
+				this.name = name;
+				this.initializer = initializer;
+			}
+
+
+			public override R accept<R>(Visitor<R> visitor) {
+				return visitor.visitVarStmt(this);
 			}
 			public readonly Token name;
 			public readonly Expr initializer;

@@ -22,7 +22,7 @@ namespace AutonoCy
         // Keywords
         AND, BOOL, CLASS, ELSE, FALSE, FLOAT, FOR, FROM, FUN, IF, INT, NIL, 
         OR, PRINT, PRINT_ERR, PRIVATE, PUBLIC, RETURN, SUPER, STR, THIS, TRUE,
-        VOID, WHILE,
+        VAR, VOID, WHILE,
 
         EOF
     }

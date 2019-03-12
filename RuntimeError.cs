@@ -15,4 +15,14 @@ namespace AutonoCy
             this.token = token;
         }
     }
+
+    public class Return : SystemException
+    {
+        readonly object value;
+
+        public Return(object value) : base()
+        {
+            this.value = value;
+        }
+    }
 }

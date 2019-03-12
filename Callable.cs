@@ -6,8 +6,20 @@ using System.Threading.Tasks;
 
 namespace AutonoCy
 {
-    interface Callable
+    abstract class Callable
     {
-        object call(Interpreter interpreter, List<object> arguments);
+        public abstract int arity { get; }
+
+        public abstract object CALL(Interpreter interpreter, List<object> arguments);
+    }
+
+    class ClockNativeFunction : Callable
+    {
+        public override int arity { get; } = 0;
+
+        public override object CALL(Interpreter interpreter, List<object> arguments)
+        {
+            return (double)DateTime.Now.TimeOfDay.TotalMilliseconds;
+        }
     }
 }

@@ -8,7 +8,14 @@ namespace AutonoCy
 {
     class Interpreter : Expr.Visitor<object>, Stmt.Visitor<object> 
     {
-        private Environment environment = new Environment();
+        public readonly Environment globals = new Environment();
+        private Environment environment;
+
+        public Interpreter()
+        {
+            globals.define("clock", new ClockNativeFunction());
+            environment = globals;
+        }
 
         // === Entry and Evaluation Control Methods ===
         public void interpret(List<Stmt> statements)
@@ -168,14 +175,19 @@ namespace AutonoCy
                 arguments.Add(evaluate(argument));
             }
 
-            if (!(callee.GetType() == typeof(Callable))) {
+            if (!callee.GetType().IsSubclassOf(typeof(Callable))) {
                 throw new RuntimeError(expr.paren, "Can only call functions and classes.");
 
             }
 
 
             Callable function = (Callable)callee;
-            return function.call(this, arguments);
+            if (arguments.Count() != function.arity)
+            {
+                throw new RuntimeError(expr.paren, "Expected " + function.arity + " arguments but got " + arguments.Count + ".");
+            }
+
+            return function.CALL(this, arguments);
         }
 
         public object visitVariableExpr(Expr.Variable expr)
@@ -250,6 +262,14 @@ namespace AutonoCy
             return null;
         }
 
+        public object visitFunctionStmt(Stmt.Function stmt)
+        {
+            Function function = new Function(stmt);
+            environment.define(stmt.name.lexeme, function);
+            environment.define(stmt.name.lexeme, function);
+            return null;
+        }
+
         public object visitIfStmt(Stmt.If stmt)
         {
             if (isTruthy(evaluate(stmt.condition)))
@@ -280,6 +300,14 @@ namespace AutonoCy
             Console.Error.WriteLine(stringify(value));
             Console.ForegroundColor = color;
             return null;
+        }
+
+        public object visitReturnStmt(Stmt.Return stmt)
+        {
+            object value = null;
+            if (stmt.value != null) value = evaluate(stmt.value);
+
+            throw new Return(value);
         }
 
         public object visitIntStmt(Stmt.Int stmt)
@@ -330,8 +358,20 @@ namespace AutonoCy
             return null;
         }
 
+        public object visitVarStmt(Stmt.Var stmt)
+        {
+            object value = null;
+            if (stmt.initializer != null)
+            {
+                value = evaluate(stmt.initializer);
+            }
+
+            environment.define(stmt.name.lexeme, value);
+            return null;
+        }
+
         // === Helper Methods ===
-        void executeBlock(List<Stmt> statements, Environment environment)
+        public void executeBlock(List<Stmt> statements, Environment environment)
         {
             Environment previous = this.environment;
             try

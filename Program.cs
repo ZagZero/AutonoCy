@@ -8,12 +8,13 @@ namespace AutonoCy
 {
     class AutonoCy_Main
     {
-        private static readonly Interpreter interpreter = new Interpreter();
+        private static Interpreter interpreter;
         static bool hadError = false;
         static bool hadRuntimeError = false;
 
         static void Main(string[] args)
         {
+            interpreter = new Interpreter();
             if (args.Length > 1)
             {
                 Console.WriteLine("Usage: autonocy [script]");
