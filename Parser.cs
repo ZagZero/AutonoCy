@@ -236,7 +236,7 @@ namespace AutonoCy
                 Token equals = previous();
                 Expr value = assignment();
 
-                if (expr.GetType() == typeof(Expr.Variable))
+                if (expr is Expr.Variable)
                 {
                     Token name = ((Expr.Variable)expr).name;
                     return new Expr.Assign(name, value);

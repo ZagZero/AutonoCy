@@ -14,6 +14,9 @@ namespace AutonoCy
         public Interpreter()
         {
             globals.define("clock", new ClockNativeFunction());
+            globals.define("input", new InputNativeFunction());
+            globals.define("stringToNumber", new StringToNumberNativeFunction());
+            globals.define("toString", new ToStringNativeFunction());
             environment = globals;
         }
 
@@ -86,8 +89,7 @@ namespace AutonoCy
                     return !isTruthy(right);
                 case TokenTypes.MINUS:
                     checkNumberOperands(expr.op, right);
-                    Type t = right.GetType();
-                    return (t == typeof(int))?-(int)right:-(double)right;
+                    return (right is int)?-(int)right:-(double)right;
                 
             }
 
@@ -99,30 +101,30 @@ namespace AutonoCy
             object left = evaluate(expr.left);
             object right = evaluate(expr.right);
 
-            Type leftType = left.GetType();
-            Type rightType = right.GetType();
+            Type leftType;
+            Type rightType;
 
-            bool leftIsInt = leftType == typeof(int);
-            bool rightIsInt = rightType == typeof(int);
+            bool leftIsInt = left is int;
+            bool rightIsInt = right is int;
             
 
             switch (expr.op.type)
             {
                 // ---Numerical-Exclusive Comparators---
                 case TokenTypes.GREATER:
-                    checkNumberOperands(expr.op, leftType, rightType);
+                    checkNumberOperands(expr.op, left, right);
                     return ((leftIsInt) ? (int)left : (double)left)
                         > ((rightIsInt) ? (int)right : (double)right);
                 case TokenTypes.GREATER_EQUAL:
-                    checkNumberOperands(expr.op, leftType, rightType);
+                    checkNumberOperands(expr.op, left, right);
                     return ((leftIsInt) ? (int)left : (double)left)
                         >= ((rightIsInt) ? (int)right : (double)right);
                 case TokenTypes.LESS:
-                    checkNumberOperands(expr.op, leftType, rightType);
+                    checkNumberOperands(expr.op, left, right);
                     return ((leftIsInt) ? (int)left : (double)left)
                         < ((rightIsInt) ? (int)right : (double)right);
                 case TokenTypes.LESS_EQUAL:
-                    checkNumberOperands(expr.op, leftType, rightType);
+                    checkNumberOperands(expr.op, left, right);
                     return ((leftIsInt) ? (int)left : (double)left)
                         <= ((rightIsInt) ? (int)right : (double)right);
 
@@ -134,30 +136,30 @@ namespace AutonoCy
 
                 // ---Arithmetic---
                 case TokenTypes.MINUS:
-                    checkNumberOperands(expr.op, leftType, rightType);
+                    checkNumberOperands(expr.op, left, right);
                     return ((leftIsInt)?(int)left:(double)left)
                         - ((rightIsInt)?(int)right:(double)right);
                 case TokenTypes.PLUS:
                     // Special: Concatenate strings
-                    if (left.GetType() == typeof(string) && right.GetType() == typeof(string))
+                    if (left is string && right is string)
                     {
                         return (string)left + (string)right;
                     }
 
                     // Normal arithmetic add
-                    checkNumberOperands(expr.op, leftType, rightType);
+                    checkNumberOperands(expr.op, left, right);
                     return ((leftIsInt) ? (int)left : (double)left)
                         + ((rightIsInt) ? (int)right : (double)right);
                 case TokenTypes.SLASH:
-                    checkNumberOperands(expr.op, leftType, rightType);
+                    checkNumberOperands(expr.op, left, right);
                     return ((leftIsInt) ? (int)left : (double)left)
                         / ((rightIsInt) ? (int)right : (double)right);
                 case TokenTypes.STAR:
-                    checkNumberOperands(expr.op, leftType, rightType);
+                    checkNumberOperands(expr.op, left, right);
                     return ((leftIsInt) ? (int)left : (double)left)
                         * ((rightIsInt) ? (int)right : (double)right);
                 case TokenTypes.CARET:
-                    checkNumberOperands(expr.op, leftType, rightType);
+                    checkNumberOperands(expr.op, left, right);
                     return Math.Pow(((leftIsInt) ? (int)left : (double)left), 
                          ((rightIsInt) ? (int)right : (double)right));
             }
@@ -175,7 +177,7 @@ namespace AutonoCy
                 arguments.Add(evaluate(argument));
             }
 
-            if (!callee.GetType().IsSubclassOf(typeof(Callable))) {
+            if (!(callee is Callable)) {
                 throw new RuntimeError(expr.paren, "Can only call functions and classes.");
 
             }
@@ -216,14 +218,14 @@ namespace AutonoCy
         // === Checks and Helper Methods ===
         private void checkNumberOperands(Token op, object operand)
         {
-            if (operand.GetType() == typeof(double) || operand.GetType() == typeof(int)) return;
+            if (operand is double || operand is int) return;
             throw new RuntimeError(op, "Operand must be a number");
         }
 
-        private void checkNumberOperands(Token op, Type left, Type right)
+        private void checkNumberOperands(Token op, object left, object right)
         {
-            if ((left == typeof(double) || left == typeof(int))
-                && (right == typeof(double) || right == typeof(int))) return;
+            if ((left is double || left is int)
+                && (right is double || right is int)) return;
             throw new RuntimeError(op, "Operands must be numbers.");
         }
 
@@ -238,7 +240,7 @@ namespace AutonoCy
         private bool isTruthy(object o)
         {
             if (o == null) return false;
-            if (o.GetType() == typeof(bool)) return (bool)o;
+            if (o is bool) return (bool)o;
             return true;
         }
 
