@@ -41,10 +41,13 @@ namespace AutonoCy
 			public readonly Expr expression;
 		}
 		public class Function : Stmt {
-			public Function(Token name, List<Token> parameters, List<Stmt> body) {
+            public int arity { get; internal set; }
+
+            public Function(Token name, List<Parameter> parameters, List<Stmt> body, EvalType returnType) {
 				this.name = name;
 				this.parameters = parameters;
 				this.body = body;
+                this.returnType = returnType;
 			}
 
 
@@ -52,8 +55,9 @@ namespace AutonoCy
 				return visitor.visitFunctionStmt(this);
 			}
 			public readonly Token name;
-			public readonly List<Token> parameters;
+			public readonly List<Parameter> parameters;
 			public readonly List<Stmt> body;
+            public readonly EvalType returnType;
 		}
 		public class If : Stmt {
 			public If(Expr condition, Stmt thenBranch, Stmt elseBranch) {

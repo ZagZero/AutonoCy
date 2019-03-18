@@ -6,18 +6,23 @@ using System.Threading.Tasks;
 
 namespace AutonoCy
 {
-    class Interpreter : Expr.Visitor<object>, Stmt.Visitor<object> 
+    class Interpreter : Expr.Visitor<TypedObject>, Stmt.Visitor<object> 
     {
         public readonly Environment globals = new Environment();
         private Environment environment;
 
         public Interpreter()
         {
-            globals.define("clock", new ClockNativeFunction());
-            globals.define("input", new InputNativeFunction());
-            globals.define("stringToNumber", new StringToNumberNativeFunction());
-            globals.define("toString", new ToStringNativeFunction());
+            globals.define(native("clock"), new ClockNativeFunction());
+            globals.define(native("input"), new InputNativeFunction());
+            globals.define(native("stringToNumber"), new StringToNumberNativeFunction());
+            globals.define(native("toString"), new ToStringNativeFunction());
             environment = globals;
+        }
+
+        private Token native(string name)
+        {
+            return new Token(TokenType.IDENTIFIER, name, null, -1);
         }
 
         // === Entry and Evaluation Control Methods ===
@@ -62,7 +67,7 @@ namespace AutonoCy
         {
             object left = evaluate(expr.left);
 
-            if (expr.op.type == TokenTypes.OR)
+            if (expr.op.type == TokenType.OR)
             {
                 if (isTruthy(left)) return left;
             }
@@ -85,9 +90,9 @@ namespace AutonoCy
 
             switch (expr.op.type)
             {
-                case TokenTypes.BANG:
+                case TokenType.BANG:
                     return !isTruthy(right);
-                case TokenTypes.MINUS:
+                case TokenType.MINUS:
                     checkNumberOperands(expr.op, right);
                     return (right is int)?-(int)right:-(double)right;
                 
@@ -111,35 +116,35 @@ namespace AutonoCy
             switch (expr.op.type)
             {
                 // ---Numerical-Exclusive Comparators---
-                case TokenTypes.GREATER:
+                case TokenType.GREATER:
                     checkNumberOperands(expr.op, left, right);
                     return ((leftIsInt) ? (int)left : (double)left)
                         > ((rightIsInt) ? (int)right : (double)right);
-                case TokenTypes.GREATER_EQUAL:
+                case TokenType.GREATER_EQUAL:
                     checkNumberOperands(expr.op, left, right);
                     return ((leftIsInt) ? (int)left : (double)left)
                         >= ((rightIsInt) ? (int)right : (double)right);
-                case TokenTypes.LESS:
+                case TokenType.LESS:
                     checkNumberOperands(expr.op, left, right);
                     return ((leftIsInt) ? (int)left : (double)left)
                         < ((rightIsInt) ? (int)right : (double)right);
-                case TokenTypes.LESS_EQUAL:
+                case TokenType.LESS_EQUAL:
                     checkNumberOperands(expr.op, left, right);
                     return ((leftIsInt) ? (int)left : (double)left)
                         <= ((rightIsInt) ? (int)right : (double)right);
 
                 // ---Universal Comparators---
-                case TokenTypes.BANG_EQUAL:
+                case TokenType.BANG_EQUAL:
                     return !isEqual(left, right);
-                case TokenTypes.EQUAL_EQUAL:
+                case TokenType.EQUAL_EQUAL:
                     return isEqual(left, right);
 
                 // ---Arithmetic---
-                case TokenTypes.MINUS:
+                case TokenType.MINUS:
                     checkNumberOperands(expr.op, left, right);
                     return ((leftIsInt)?(int)left:(double)left)
                         - ((rightIsInt)?(int)right:(double)right);
-                case TokenTypes.PLUS:
+                case TokenType.PLUS:
                     // Special: Concatenate strings
                     if (left is string && right is string)
                     {
@@ -150,15 +155,15 @@ namespace AutonoCy
                     checkNumberOperands(expr.op, left, right);
                     return ((leftIsInt) ? (int)left : (double)left)
                         + ((rightIsInt) ? (int)right : (double)right);
-                case TokenTypes.SLASH:
+                case TokenType.SLASH:
                     checkNumberOperands(expr.op, left, right);
                     return ((leftIsInt) ? (int)left : (double)left)
                         / ((rightIsInt) ? (int)right : (double)right);
-                case TokenTypes.STAR:
+                case TokenType.STAR:
                     checkNumberOperands(expr.op, left, right);
                     return ((leftIsInt) ? (int)left : (double)left)
                         * ((rightIsInt) ? (int)right : (double)right);
-                case TokenTypes.CARET:
+                case TokenType.CARET:
                     checkNumberOperands(expr.op, left, right);
                     return Math.Pow(((leftIsInt) ? (int)left : (double)left), 
                          ((rightIsInt) ? (int)right : (double)right));
@@ -167,23 +172,23 @@ namespace AutonoCy
             return null;
         }
 
-        public object visitCallExpr(Expr.Call expr)
+        public TypedObject visitCallExpr(Expr.Call expr)
         {
-            object callee = evaluate(expr.callee);
+            TypedObject callee = evaluate(expr.callee);
 
-            List<object> arguments = new List<object>();
+            List<TypedObject> arguments = new List<TypedObject>();
             foreach (Expr argument in expr.arguments)
             {
-                arguments.Add(evaluate(argument));
+                arguments.Add(new TypedObject(evaluate(argument)));
             }
 
-            if (!(callee is Callable)) {
+            if (!(callee.value is Callable)) {
                 throw new RuntimeError(expr.paren, "Can only call functions and classes.");
 
             }
 
 
-            Callable function = (Callable)callee;
+            Callable function = (Callable)callee.value;
             if (arguments.Count() != function.arity)
             {
                 throw new RuntimeError(expr.paren, "Expected " + function.arity + " arguments but got " + arguments.Count + ".");
@@ -244,7 +249,7 @@ namespace AutonoCy
             return true;
         }
 
-        private object evaluate(Expr expr)
+        private TypedObject evaluate(Expr expr)
         {
             return expr.accept(this);
         }

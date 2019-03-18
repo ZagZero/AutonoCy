@@ -18,11 +18,18 @@ namespace AutonoCy
 
     public class Return : SystemException
     {
+        public readonly EvalType type;
         public readonly object value;
 
-        public Return(object value) : base()
+        public Return(EvalType type, object value) : base()
         {
+            this.type = type;
             this.value = value;
+        }
+
+        public TypedObject ToTypedObject()
+        {
+            return new TypedObject(type, value);
         }
     }
 }

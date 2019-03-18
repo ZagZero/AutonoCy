@@ -8,7 +8,7 @@ namespace AutonoCy
 {
     class Environment
     {
-        readonly Environment enclosing;
+        public readonly Environment enclosing;
         private readonly Dictionary<string, object> values = new Dictionary<string, object>();
 
         public Environment()
@@ -21,15 +21,20 @@ namespace AutonoCy
             this.enclosing = enclosing;
         }
 
-        public object getVar(Token name)
+        public object getVar(Token name, bool isParsing = false, bool localOnly = false)
         {
             if (values.ContainsKey(name.lexeme))
             {
                 return values[name.lexeme];
             }
 
-            if (enclosing != null) return enclosing.getVar(name);
-
+            if (enclosing != null && !localOnly) return enclosing.getVar(name, isParsing);
+            
+            if (isParsing)
+            {
+                return null;
+            }
+            
             throw new RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
         }
 
@@ -50,10 +55,24 @@ namespace AutonoCy
             throw new RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
         }
 
-        public void define (string name, object value)
+        public void define (Token name, object value, bool parsing = false, Parser parser = null)
         {
             // Check type before just allowing it to be overwritten
-            values[name] = value;
+            if (values.ContainsKey(name.lexeme))
+            {
+                if (parsing) {
+                    if (name.lexeme.Last() == '(')
+                    {
+                        throw parser.error(name, "Function '" + name.lexeme.Substring(0, name.lexeme.Length - 1) + "' already defined in this scope.");
+                    }
+                    else
+                    {
+                        throw parser.error(name, "Variable '" + name.lexeme + "' already defined in this scope.");
+                    }
+                }
+                else throw new RuntimeError(name, "Variable '" + name.lexeme + "' already defined in this scope.");
+            }
+            values[name.lexeme] = value;
         }
     }
 }

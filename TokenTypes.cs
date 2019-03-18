@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AutonoCy
 {
-    public enum TokenTypes
+    public enum TokenType
     {
         // Single character tokens
         LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE, LEFT_BRACKET, RIGHT_BRACKET,
@@ -25,5 +25,16 @@ namespace AutonoCy
         VAR, VOID, WHILE,
 
         EOF
+    }
+
+    public enum EvalType
+    {
+        NIL, // NULL
+
+        // Basic types
+        BOOL, FLOAT, INT, STRING,
+
+        // Special types
+        TYPELESS, VOID, CLASS
     }
 }

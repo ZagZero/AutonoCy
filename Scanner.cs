@@ -15,7 +15,7 @@ namespace AutonoCy
         private int current = 0;
         private int line = 1;
 
-        static readonly Dictionary<string, TokenTypes> keywords;
+        static readonly Dictionary<string, TokenType> keywords;
 
         private bool isAtEnd()
         {
@@ -24,31 +24,31 @@ namespace AutonoCy
 
         static Scanner()
         {
-            keywords = new Dictionary<string, TokenTypes>();
-            keywords.Add("and", TokenTypes.AND);
-            keywords.Add("bool", TokenTypes.BOOL);
-            keywords.Add("class", TokenTypes.CLASS);
-            keywords.Add("else", TokenTypes.ELSE);
-            keywords.Add("false", TokenTypes.FALSE);
-            keywords.Add("float", TokenTypes.FLOAT);
-            keywords.Add("from", TokenTypes.FROM);
-            keywords.Add("for", TokenTypes.FOR);
-            keywords.Add("fun", TokenTypes.FUN);
-            keywords.Add("if", TokenTypes.IF);
-            keywords.Add("int", TokenTypes.INT);
-            keywords.Add("nil", TokenTypes.NIL);
-            keywords.Add("or", TokenTypes.OR);
-            keywords.Add("print", TokenTypes.PRINT);
-            keywords.Add("printErr", TokenTypes.PRINT_ERR);
-            keywords.Add("private", TokenTypes.PRIVATE);
-            keywords.Add("public", TokenTypes.PUBLIC);
-            keywords.Add("return", TokenTypes.RETURN);
-            keywords.Add("string", TokenTypes.STR);
-            keywords.Add("super", TokenTypes.SUPER);
-            keywords.Add("this", TokenTypes.THIS);
-            keywords.Add("true", TokenTypes.TRUE);
-            keywords.Add("var", TokenTypes.VAR);
-            keywords.Add("while", TokenTypes.WHILE);
+            keywords = new Dictionary<string, TokenType>();
+            keywords.Add("and", TokenType.AND);
+            keywords.Add("bool", TokenType.BOOL);
+            keywords.Add("class", TokenType.CLASS);
+            keywords.Add("else", TokenType.ELSE);
+            keywords.Add("false", TokenType.FALSE);
+            keywords.Add("float", TokenType.FLOAT);
+            keywords.Add("from", TokenType.FROM);
+            keywords.Add("for", TokenType.FOR);
+            keywords.Add("fun", TokenType.FUN);
+            keywords.Add("if", TokenType.IF);
+            keywords.Add("int", TokenType.INT);
+            keywords.Add("nil", TokenType.NIL);
+            keywords.Add("or", TokenType.OR);
+            keywords.Add("print", TokenType.PRINT);
+            keywords.Add("printErr", TokenType.PRINT_ERR);
+            keywords.Add("private", TokenType.PRIVATE);
+            keywords.Add("public", TokenType.PUBLIC);
+            keywords.Add("return", TokenType.RETURN);
+            keywords.Add("string", TokenType.STR);
+            keywords.Add("super", TokenType.SUPER);
+            keywords.Add("this", TokenType.THIS);
+            keywords.Add("true", TokenType.TRUE);
+            keywords.Add("var", TokenType.VAR);
+            keywords.Add("while", TokenType.WHILE);
         }
 
 
@@ -68,7 +68,7 @@ namespace AutonoCy
                 scanToken();
             }
 
-            tokens.Add(new Token(TokenTypes.EOF, "", null, line));
+            tokens.Add(new Token(TokenType.EOF, "", null, line));
             return tokens;
         }
 
@@ -78,29 +78,29 @@ namespace AutonoCy
             switch (c)
             {
                 // Single character lexemes
-                case '(': addToken(TokenTypes.LEFT_PAREN); break;
-                case ')': addToken(TokenTypes.RIGHT_PAREN); break;
-                case '{': addToken(TokenTypes.LEFT_BRACE); break;
-                case '}': addToken(TokenTypes.RIGHT_BRACE); break;
-                case '[': addToken(TokenTypes.LEFT_BRACKET); break;
-                case ']': addToken(TokenTypes.RIGHT_BRACKET); break;
-                case ',': addToken(TokenTypes.COMMA); break;
-                case '.': addToken(TokenTypes.DOT); break;
-                case '-': addToken(TokenTypes.MINUS); break;
-                case '+': addToken(TokenTypes.PLUS); break;
-                case ';': addToken(TokenTypes.SEMICOLON); break;
-                case '*': addToken(TokenTypes.STAR); break;
-                case '^': addToken(TokenTypes.CARET); break;
+                case '(': addToken(TokenType.LEFT_PAREN); break;
+                case ')': addToken(TokenType.RIGHT_PAREN); break;
+                case '{': addToken(TokenType.LEFT_BRACE); break;
+                case '}': addToken(TokenType.RIGHT_BRACE); break;
+                case '[': addToken(TokenType.LEFT_BRACKET); break;
+                case ']': addToken(TokenType.RIGHT_BRACKET); break;
+                case ',': addToken(TokenType.COMMA); break;
+                case '.': addToken(TokenType.DOT); break;
+                case '-': addToken(TokenType.MINUS); break;
+                case '+': addToken(TokenType.PLUS); break;
+                case ';': addToken(TokenType.SEMICOLON); break;
+                case '*': addToken(TokenType.STAR); break;
+                case '^': addToken(TokenType.CARET); break;
 
                 // Possibly double character lexemes
-                case '!': addToken(match('=') ? TokenTypes.BANG_EQUAL : TokenTypes.BANG); break;
-                case '=': addToken(match('=') ? TokenTypes.EQUAL_EQUAL : TokenTypes.EQUAL); break;
-                case '<': addToken(match('=') ? TokenTypes.LESS_EQUAL : TokenTypes.LESS); break;
-                case '>': addToken(match('=') ? TokenTypes.GREATER_EQUAL : TokenTypes.GREATER); break;
+                case '!': addToken(match('=') ? TokenType.BANG_EQUAL : TokenType.BANG); break;
+                case '=': addToken(match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL); break;
+                case '<': addToken(match('=') ? TokenType.LESS_EQUAL : TokenType.LESS); break;
+                case '>': addToken(match('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER); break;
                 case '&':
                     if (match('&'))
                     {
-                        addToken(TokenTypes.AND);
+                        addToken(TokenType.AND);
                     }
                     else
                     {
@@ -110,7 +110,7 @@ namespace AutonoCy
                 case '|':
                     if (match('|'))
                     {
-                        addToken(TokenTypes.OR);
+                        addToken(TokenType.OR);
                     }
                     else
                     {
@@ -127,7 +127,7 @@ namespace AutonoCy
                     }
                     else
                     {
-                        addToken(TokenTypes.SLASH);
+                        addToken(TokenType.SLASH);
                     }
                     break;
 
@@ -170,12 +170,12 @@ namespace AutonoCy
             return source[current - 1];
         }
 
-        void addToken(TokenTypes type)
+        void addToken(TokenType type)
         {
             addToken(type, null);
         }
 
-        void addToken(TokenTypes type, Object literal)
+        void addToken(TokenType type, Object literal)
         {
             string text = source.Substring(start, current - start);
             tokens.Add(new Token(type, text, literal, line));
@@ -275,7 +275,7 @@ namespace AutonoCy
 
             // Trim the surrounding quotes
             string value = source.Substring(start + 1, current - start - 2);
-            addToken(TokenTypes.STRING, stringLiteral);
+            addToken(TokenType.STRING, stringLiteral);
         }
 
         void numberL()
@@ -297,11 +297,11 @@ namespace AutonoCy
 
             if (isFloat)
             {
-                addToken(TokenTypes.FLOAT_L, Double.Parse(source.Substring(start, current - start)));
+                addToken(TokenType.FLOAT_L, double.Parse(source.Substring(start, current - start)));
             }
             else
             {
-                addToken(TokenTypes.INTEGER, Int32.Parse(source.Substring(start, current - start)));
+                addToken(TokenType.INTEGER, int.Parse(source.Substring(start, current - start)));
             }
         }
 
@@ -311,14 +311,14 @@ namespace AutonoCy
 
             string text = source.Substring(start, current - start);
 
-            TokenTypes type;
+            TokenType type;
             if (keywords.TryGetValue(text, out type))
             {
                 addToken(type);
             }
             else
             {
-                addToken(TokenTypes.IDENTIFIER);
+                addToken(TokenType.IDENTIFIER);
             }
         }
 

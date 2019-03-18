@@ -48,6 +48,7 @@
     <Compile Include="Expr.cs" />
     <Compile Include="Function.cs" />
     <Compile Include="Interpreter.cs" />
+    <Compile Include="MiniClasses.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="RuntimeError.cs" />
     <Compile Include="Scanner.cs" />

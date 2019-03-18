@@ -87,7 +87,7 @@ namespace AutonoCy
 
         public static void error(Token token, string message)
         {
-            if (token.type == TokenTypes.EOF)
+            if (token.type == TokenType.EOF)
             {
                 report(token.line, " at end", message);
             }

@@ -9,21 +9,23 @@ namespace AutonoCy
     class Function : Callable
     {
         public override int arity { get; }
+        public override EvalType returnType { get; }
 
         private readonly Stmt.Function declaration;
         public Function(Stmt.Function declaration)
         {
+            declaration.
             arity = declaration.parameters.Count();
             this.declaration = declaration;
         }
 
-        public override object CALL(Interpreter interpreter, List<object> arguments)
+        public override TypedObject CALL(Interpreter interpreter, List<TypedObject> arguments)
         {
             Environment environment = new Environment(interpreter.globals);
 
             for (int i = 0; i < declaration.parameters.Count(); i++)
             {
-                environment.define(declaration.parameters[i].lexeme, arguments[i]);
+                environment.define(declaration.parameters[i].name, arguments[i]);
             }
 
             try
@@ -32,7 +34,7 @@ namespace AutonoCy
             }
             catch (Return returnValue)
             {
-                return returnValue.value;
+                return returnValue.ToTypedObject();
             }
             return null;
         }

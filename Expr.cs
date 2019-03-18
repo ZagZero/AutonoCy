@@ -14,7 +14,7 @@ namespace AutonoCy
 			R visitVariableExpr(Variable expr);
 		}
 		public class Assign : Expr {
-			public Assign(Token name, Expr value) {
+			public Assign(Token name, Expr value, EvalType evalType) : base(evalType) {
 				this.name = name;
 				this.value = value;
 			}
@@ -27,7 +27,7 @@ namespace AutonoCy
 			public readonly Expr value;
 		}
 		public class Binary : Expr {
-			public Binary(Expr left, Token op, Expr right) {
+			public Binary(Expr left, Token op, Expr right, EvalType evalType) : base(evalType) {
 				this.left = left;
 				this.op = op;
 				this.right = right;
@@ -42,7 +42,7 @@ namespace AutonoCy
 			public readonly Expr right;
 		}
 		public class Call : Expr {
-			public Call(Expr callee, Token paren, List<Expr> arguments) {
+			public Call(Expr callee, Token paren, List<Expr> arguments, EvalType evalType) : base(evalType) {
 				this.callee = callee;
 				this.paren = paren;
 				this.arguments = arguments;
@@ -57,7 +57,7 @@ namespace AutonoCy
 			public readonly List<Expr> arguments;
 		}
 		public class Grouping : Expr {
-			public Grouping(Expr expression) {
+			public Grouping(Expr expression, EvalType evalType) : base(evalType) {
 				this.expression = expression;
 			}
 
@@ -68,7 +68,7 @@ namespace AutonoCy
 			public readonly Expr expression;
 		}
 		public class Literal : Expr {
-			public Literal(object value) {
+			public Literal(object value, EvalType evalType) : base(evalType) {
 				this.value = value;
 			}
 
@@ -79,7 +79,7 @@ namespace AutonoCy
 			public readonly object value;
 		}
 		public class Logical : Expr {
-			public Logical(Expr left, Token op, Expr right) {
+			public Logical(Expr left, Token op, Expr right, EvalType evalType) : base(evalType) {
 				this.left = left;
 				this.op = op;
 				this.right = right;
@@ -94,7 +94,7 @@ namespace AutonoCy
 			public readonly Expr right;
 		}
 		public class Unary : Expr {
-			public Unary(Token op, Expr right) {
+			public Unary(Token op, Expr right, EvalType evalType) : base(evalType) {
 				this.op = op;
 				this.right = right;
 			}
@@ -107,7 +107,7 @@ namespace AutonoCy
 			public readonly Expr right;
 		}
 		public class Variable : Expr {
-			public Variable(Token name) {
+			public Variable(Token name, EvalType evalType) : base(evalType) {
 				this.name = name;
 			}
 
@@ -119,5 +119,11 @@ namespace AutonoCy
 		}
 
 		public abstract R accept<R>(Visitor<R> visitor);
+
+        public readonly EvalType evalType;
+        public Expr(EvalType evalType)
+        {
+            this.evalType = evalType;
+        }
 	}
 }
