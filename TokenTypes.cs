@@ -35,6 +35,6 @@ namespace AutonoCy
         BOOL, FLOAT, INT, STRING,
 
         // Special types
-        TYPELESS, VOID, CLASS
+        TYPELESS, VOID, FUNCTION, CLASS
     }
 }

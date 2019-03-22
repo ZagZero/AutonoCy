@@ -29,7 +29,7 @@ namespace AutonoCy
 
         public TypedObject ToTypedObject()
         {
-            return new TypedObject(type, value);
+            return new TypedObject(type, value, null);
         }
     }
 }

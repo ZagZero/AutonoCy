@@ -13,10 +13,11 @@ namespace AutonoCy
 
         public Interpreter()
         {
-            globals.define(native("clock"), new ClockNativeFunction());
-            globals.define(native("input"), new InputNativeFunction());
-            globals.define(native("stringToNumber"), new StringToNumberNativeFunction());
-            globals.define(native("toString"), new ToStringNativeFunction());
+            globals.define(native("clock"), new TypedObject(EvalType.FUNCTION, new ClockNativeFunction(), null));
+            globals.define(native("input"), new TypedObject(EvalType.FUNCTION, new InputNativeFunction(), null));
+            globals.define(native("stringToNumber"), new TypedObject(EvalType.FUNCTION, new StringToNumberNativeFunction(), null));
+            globals.define(native("toString"), new TypedObject(EvalType.FUNCTION, new ToStringNativeFunction(), null));
+            globals.define(native("getType"), new TypedObject(EvalType.FUNCTION, new GetTypeNativeFunction(), null));
             environment = globals;
         }
 
@@ -48,24 +49,24 @@ namespace AutonoCy
             return null;
         }
 
-        private string stringify(object o)
+        private string stringify(TypedObject o)
         {
-            if (o == null) return "nil";
-            return o.ToString();
+            if (o.GetValue() == null) return "NIL";
+            return o.GetValue().ToString();
         }
 
 
 
         // *** EXPRESSION ***
         // === Expression Visit Methods ===
-        public object visitLiteralExpr(Expr.Literal expr)
+        public TypedObject visitLiteralExpr(Expr.Literal expr)
         {
-            return expr.value;
+            return new TypedObject(expr.evalType, expr.value, expr.origin);
         }
 
-        public object visitLogicalExpr(Expr.Logical expr)
+        public TypedObject visitLogicalExpr(Expr.Logical expr)
         {
-            object left = evaluate(expr.left);
+            TypedObject left = evaluate(expr.left);
 
             if (expr.op.type == TokenType.OR)
             {
@@ -79,38 +80,35 @@ namespace AutonoCy
             return evaluate(expr.right);
         }
 
-        public object visitGroupingExpr(Expr.Grouping expr)
+        public TypedObject visitGroupingExpr(Expr.Grouping expr)
         {
             return evaluate(expr.expression);
         }
 
-        public object visitUnaryExpr(Expr.Unary expr)
+        public TypedObject visitUnaryExpr(Expr.Unary expr)
         {
-            object right = evaluate(expr.right);
+            TypedObject right = evaluate(expr.right);
 
             switch (expr.op.type)
             {
                 case TokenType.BANG:
-                    return !isTruthy(right);
+                    return new TypedObject(EvalType.BOOL, !isTruthy(right), expr.op);
                 case TokenType.MINUS:
                     checkNumberOperands(expr.op, right);
-                    return (right is int)?-(int)right:-(double)right;
+                    return right;
                 
             }
 
             return null;
         }
 
-        public object visitBinaryExpr(Expr.Binary expr)
+        public TypedObject visitBinaryExpr(Expr.Binary expr)
         {
-            object left = evaluate(expr.left);
-            object right = evaluate(expr.right);
+            TypedObject left = evaluate(expr.left);
+            TypedObject right = evaluate(expr.right);
 
-            Type leftType;
-            Type rightType;
-
-            bool leftIsInt = left is int;
-            bool rightIsInt = right is int;
+            bool leftIsInt = left.varType == EvalType.INT;
+            bool rightIsInt = right.varType == EvalType.INT;
             
 
             switch (expr.op.type)
@@ -118,55 +116,77 @@ namespace AutonoCy
                 // ---Numerical-Exclusive Comparators---
                 case TokenType.GREATER:
                     checkNumberOperands(expr.op, left, right);
-                    return ((leftIsInt) ? (int)left : (double)left)
-                        > ((rightIsInt) ? (int)right : (double)right);
+                    return new TypedObject(EvalType.BOOL,
+                        ((leftIsInt) ? (int)left.GetValue().value : (double)left.GetValue().value)
+                        > ((rightIsInt) ? (int)right.GetValue().value : (double)right.GetValue().value),
+                        expr.op);
                 case TokenType.GREATER_EQUAL:
                     checkNumberOperands(expr.op, left, right);
-                    return ((leftIsInt) ? (int)left : (double)left)
-                        >= ((rightIsInt) ? (int)right : (double)right);
+                    return new TypedObject(EvalType.BOOL,
+                        ((leftIsInt) ? (int)left.GetValue().value : (double)left.GetValue().value)
+                        >= ((rightIsInt) ? (int)right.GetValue().value : (double)right.GetValue().value),
+                        expr.op);
                 case TokenType.LESS:
                     checkNumberOperands(expr.op, left, right);
-                    return ((leftIsInt) ? (int)left : (double)left)
-                        < ((rightIsInt) ? (int)right : (double)right);
+                    return new TypedObject(EvalType.BOOL,
+                        ((leftIsInt) ? (int)left.GetValue().value : (double)left.GetValue().value)
+                        < ((rightIsInt) ? (int)right.GetValue().value : (double)right.GetValue().value),
+                        expr.op);
                 case TokenType.LESS_EQUAL:
                     checkNumberOperands(expr.op, left, right);
-                    return ((leftIsInt) ? (int)left : (double)left)
-                        <= ((rightIsInt) ? (int)right : (double)right);
+                    return new TypedObject(EvalType.BOOL,
+                        ((leftIsInt) ? (int)left.GetValue().value : (double)left.GetValue().value)
+                        <= ((rightIsInt) ? (int)right.GetValue().value : (double)right.GetValue().value),
+                        expr.op);
 
                 // ---Universal Comparators---
                 case TokenType.BANG_EQUAL:
-                    return !isEqual(left, right);
+                    return new TypedObject(EvalType.BOOL, !isEqual(left, right),
+                        expr.op);
                 case TokenType.EQUAL_EQUAL:
-                    return isEqual(left, right);
+                    return new TypedObject(EvalType.BOOL, isEqual(left, right),
+                        expr.op);
 
                 // ---Arithmetic---
                 case TokenType.MINUS:
                     checkNumberOperands(expr.op, left, right);
-                    return ((leftIsInt)?(int)left:(double)left)
-                        - ((rightIsInt)?(int)right:(double)right);
+                    return new TypedObject((leftIsInt && rightIsInt) ? EvalType.INT : EvalType.FLOAT,
+                        ((leftIsInt) ? (int)left.GetValue().value : (double)left.GetValue().value)
+                        - ((rightIsInt) ? (int)right.GetValue().value : (double)right.GetValue().value),
+                        expr.op);
                 case TokenType.PLUS:
                     // Special: Concatenate strings
-                    if (left is string && right is string)
+                    if (left.GetValue().varType == EvalType.STRING && right.GetValue().varType == EvalType.STRING)
                     {
-                        return (string)left + (string)right;
+                        return new TypedObject(EvalType.STRING, (string)left.GetValue().value + (string)right.GetValue().value,
+                        expr.op);
                     }
 
+
                     // Normal arithmetic add
-                    checkNumberOperands(expr.op, left, right);
-                    return ((leftIsInt) ? (int)left : (double)left)
-                        + ((rightIsInt) ? (int)right : (double)right);
+                    checkNumberOperands(expr.op, left.GetValue(), right.GetValue());
+                    return new TypedObject((leftIsInt && rightIsInt) ? EvalType.INT : EvalType.FLOAT,
+                        ((leftIsInt) ? (int)left.GetValue().value : (double)left.GetValue().value)
+                        + ((rightIsInt) ? (int)right.GetValue().value : (double)right.GetValue().value),
+                        expr.op);
                 case TokenType.SLASH:
                     checkNumberOperands(expr.op, left, right);
-                    return ((leftIsInt) ? (int)left : (double)left)
-                        / ((rightIsInt) ? (int)right : (double)right);
+                    return new TypedObject((leftIsInt && rightIsInt) ? EvalType.INT : EvalType.FLOAT,
+                        ((leftIsInt) ? (int)left.GetValue().value : (double)left.GetValue().value)
+                        / ((rightIsInt) ? (int)right.GetValue().value : (double)right.GetValue().value),
+                        expr.op);
                 case TokenType.STAR:
                     checkNumberOperands(expr.op, left, right);
-                    return ((leftIsInt) ? (int)left : (double)left)
-                        * ((rightIsInt) ? (int)right : (double)right);
+                    return new TypedObject((leftIsInt && rightIsInt) ? EvalType.INT : EvalType.FLOAT,
+                        ((leftIsInt) ? (int)left.GetValue().value : (double)left.GetValue().value)
+                        * ((rightIsInt) ? (int)right.GetValue().value : (double)right.GetValue().value),
+                        expr.op);
                 case TokenType.CARET:
                     checkNumberOperands(expr.op, left, right);
-                    return Math.Pow(((leftIsInt) ? (int)left : (double)left), 
-                         ((rightIsInt) ? (int)right : (double)right));
+                    return new TypedObject((leftIsInt && rightIsInt) ? EvalType.INT : EvalType.FLOAT, 
+                        Math.Pow(((leftIsInt) ? (int)left.GetValue().value : (double)left.GetValue().value), 
+                         ((rightIsInt) ? (int)right.GetValue().value : (double)right.GetValue().value)),
+                        expr.op);
             }
 
             return null;
@@ -179,73 +199,86 @@ namespace AutonoCy
             List<TypedObject> arguments = new List<TypedObject>();
             foreach (Expr argument in expr.arguments)
             {
-                arguments.Add(new TypedObject(evaluate(argument)));
+                arguments.Add(evaluate(argument));
             }
 
-            if (!(callee.value is Callable)) {
+            if (!(callee.GetValue().value is Callable)) {
                 throw new RuntimeError(expr.paren, "Can only call functions and classes.");
 
             }
 
+            
+
 
             Callable function = (Callable)callee.value;
-            if (arguments.Count() != function.arity)
+            // TODO: Support overloading
+            if (function.paramTypes.Count != arguments.Count)
             {
-                throw new RuntimeError(expr.paren, "Expected " + function.arity + " arguments but got " + arguments.Count + ".");
+                throw new RuntimeError(expr.paren, "Invalid number of arguments: expecting " + function.paramTypes.Count.ToString() +
+                    ", received " + arguments.Count.ToString() + ".");
+            }
+            for (int i = 0; i < function.paramTypes.Count; i++)
+            {
+                EvalType argType = arguments[i].GetValue().varType;
+                if (!matchingEvalTypes(function.paramTypes[i], argType))
+                {
+                    throw new RuntimeError(expr.paren, "Argument " + (i + 1).ToString() + " type mismatch: expecting '" +
+                        function.paramTypes[i].ToString() + "', received '" + arguments[i].varType.ToString() + "'.");
+                }
             }
 
             return function.CALL(this, arguments);
         }
 
-        public object visitVariableExpr(Expr.Variable expr)
+        public TypedObject visitVariableExpr(Expr.Variable expr)
         {
             return environment.getVar(expr.name);
         }
 
-        public object visitAssignExpr(Expr.Assign expr)
+        public TypedObject visitAssignExpr(Expr.Assign expr)
         {
-            object value = evaluate(expr.value);
+            TypedObject value = evaluate(expr.value);
 
             environment.assign(expr.name, value);
             return value;
         }
 
-        public object visitWhileStmt(Stmt.While stmt)
-        {
-            while (isTruthy(evaluate(stmt.condition)))
-            {
-                execute(stmt.body);
-            }
-            return null;
-        }
-
 
         // === Checks and Helper Methods ===
-        private void checkNumberOperands(Token op, object operand)
+        private void checkNumberOperands(Token op, TypedObject operand)
         {
-            if (operand is double || operand is int) return;
-            throw new RuntimeError(op, "Operand must be a number");
+            if (TypedObject.matchingEvalTypes(EvalType.FLOAT, operand.varType)) return;
+            throw new RuntimeError(op, "Operand must be a number; was type '" + operand.GetValue().varType + "'.");
         }
 
-        private void checkNumberOperands(Token op, object left, object right)
+        private void checkNumberOperands(Token op, TypedObject left, TypedObject right)
         {
-            if ((left is double || left is int)
-                && (right is double || right is int)) return;
-            throw new RuntimeError(op, "Operands must be numbers.");
+            if (!TypedObject.matchingEvalTypes(EvalType.FLOAT, left.GetValue().varType))
+            {
+                throw new RuntimeError(op, "Operands must be numbers; left was type '" + left.GetValue().varType.ToString() + "'.");
+            } 
+            if (!TypedObject.matchingEvalTypes(EvalType.FLOAT, right.GetValue().varType))
+            {
+                throw new RuntimeError(op, "Operands must be numbers; right was type '" + right.GetValue().varType.ToString() + "'.");
+            }
+
+            return;
         }
 
-        private bool isEqual(object a, object b)
+        private bool isEqual(TypedObject a, TypedObject b)
         {
-            if (a == null && b == null) return true;
-            if (a == null) return false;
+            a = a.GetValue();
+            b = b.GetValue();
+            if (a.varType == EvalType.NIL && b.varType == EvalType.NIL) return true;
+            if (a.varType == EvalType.NIL || b.varType == EvalType.NIL) return false;
 
-            return a.Equals(b);
+            return a.value.Equals(b.value);
         }
 
-        private bool isTruthy(object o)
+        private bool isTruthy(TypedObject o)
         {
             if (o == null) return false;
-            if (o is bool) return (bool)o;
+            if (o.value is bool) return (bool)o.value;
             return true;
         }
 
@@ -271,9 +304,9 @@ namespace AutonoCy
 
         public object visitFunctionStmt(Stmt.Function stmt)
         {
+            // TODO: Revisit and consider how to make it a typed object
             Function function = new Function(stmt);
-            environment.define(stmt.name.lexeme, function);
-            environment.define(stmt.name.lexeme, function);
+            environment.define(stmt.name, new TypedObject(EvalType.FUNCTION, function, stmt.name));
             return null;
         }
 
@@ -292,14 +325,14 @@ namespace AutonoCy
 
         public object visitPrintStmt(Stmt.Print stmt)
         {
-            object value = evaluate(stmt.expression);
+            TypedObject value = evaluate(stmt.expression);
             Console.WriteLine(stringify(value));
             return null;
         }
 
         public object visitPrint_ErrStmt(Stmt.Print_Err stmt)
         {
-            object value = evaluate(stmt.expression);
+            TypedObject value = evaluate(stmt.expression);
 
             // Hold the current color and print error in red before restoring color
             ConsoleColor color = Console.ForegroundColor;
@@ -311,69 +344,106 @@ namespace AutonoCy
 
         public object visitReturnStmt(Stmt.Return stmt)
         {
-            object value = null;
+            TypedObject value = new TypedObject(EvalType.NIL, null, stmt.keyword);
             if (stmt.value != null) value = evaluate(stmt.value);
-
-            throw new Return(value);
+            if (stmt.returnType == EvalType.VOID && value.value != null)
+            {
+                throw new RuntimeError(stmt.keyword, "Invalid return: cannot return value with function type 'VOID'");
+            }
+            if (!TypedObject.matchingEvalTypes(stmt.returnType, value.GetValue().varType))
+            {
+                throw new RuntimeError(stmt.keyword, "Invalid return type: expecting '" + stmt.returnType.ToString()
+                    + "', received '" + value.GetValue().varType.ToString() + "'.");
+            }
+            throw new Return(value.varType, value.value);
         }
 
         public object visitIntStmt(Stmt.Int stmt)
         {
-            object value = null;
+            TypedObject value = new TypedObject(EvalType.INT, (int)0, stmt.name);
             if (stmt.initializer != null)
             {
-                value = evaluate(stmt.initializer);
+                value = evaluate(stmt.initializer).GetValue();
+                if (!matchingEvalTypes(EvalType.INT, value.varType))
+                {
+                    throw new RuntimeError(stmt.name, "Cannot assign type '" + value.varType.ToString() +
+                    "' to variable '" + stmt.name.lexeme + "' of type '" + EvalType.INT.ToString());
+                }
             }
 
-            environment.define(stmt.name.lexeme, value);
+            environment.define(stmt.name, value);
             return null;
         }
 
         public object visitFloatStmt(Stmt.Float stmt)
         {
-            object value = null;
+            TypedObject value = new TypedObject(EvalType.FLOAT, (double)0.0, stmt.name);
             if (stmt.initializer != null)
             {
-                value = evaluate(stmt.initializer);
+                value = evaluate(stmt.initializer).GetValue();
+                if (!matchingEvalTypes(EvalType.FLOAT, value.varType))
+                {
+                    throw new RuntimeError(stmt.name, "Cannot assign type '" + value.varType.ToString() +
+                    "' to variable '" + stmt.name.lexeme + "' of type '" + EvalType.FLOAT.ToString());
+                }
             }
 
-            environment.define(stmt.name.lexeme, value);
+            environment.define(stmt.name, value);
             return null;
         }
 
         public object visitBoolStmt(Stmt.Bool stmt)
         {
-            object value = null;
+            TypedObject value = new TypedObject(EvalType.BOOL, (bool)false, stmt.name);
             if (stmt.initializer != null)
             {
-                value = evaluate(stmt.initializer);
+                value = evaluate(stmt.initializer).GetValue();
+                if (!matchingEvalTypes(EvalType.BOOL, value.varType))
+                {
+                    throw new RuntimeError(stmt.name, "Cannot assign type '" + value.varType.ToString() +
+                    "' to variable '" + stmt.name.lexeme + "' of type '" + EvalType.BOOL.ToString());
+                }
             }
 
-            environment.define(stmt.name.lexeme, value);
+            environment.define(stmt.name, value);
             return null;
         }
 
         public object visitStringStmt(Stmt.String stmt)
         {
-            object value = null;
+            TypedObject value = new TypedObject(EvalType.STRING, (string)"", stmt.name);
             if (stmt.initializer != null)
             {
-                value = evaluate(stmt.initializer);
+                value = evaluate(stmt.initializer).GetValue();
+                if (!matchingEvalTypes(EvalType.STRING, value.varType))
+                {
+                    throw new RuntimeError(stmt.name, "Cannot assign type '" + value.varType.ToString() +
+                    "' to variable '" + stmt.name.lexeme + "' of type '" + EvalType.STRING.ToString());
+                }
             }
 
-            environment.define(stmt.name.lexeme, value);
+            environment.define(stmt.name, value);
             return null;
         }
 
         public object visitVarStmt(Stmt.Var stmt)
         {
-            object value = null;
+            TypedObject value = new TypedObject(EvalType.TYPELESS, null, stmt.name);
             if (stmt.initializer != null)
             {
-                value = evaluate(stmt.initializer);
+                value = evaluate(stmt.initializer).GetValue();
             }
 
-            environment.define(stmt.name.lexeme, value);
+            environment.define(stmt.name, value);
+            return null;
+        }
+
+        public object visitWhileStmt(Stmt.While stmt)
+        {
+            while (isTruthy(evaluate(stmt.condition)))
+            {
+                execute(stmt.body);
+            }
             return null;
         }
 
@@ -395,5 +465,25 @@ namespace AutonoCy
             }
         }
         // *** END STATEMENT ***
+
+        private bool matchingEvalTypes(EvalType requiredType, EvalType compareType, bool warn = false, Token warnAtToken = null)
+        {
+
+            if (requiredType == EvalType.TYPELESS && compareType != EvalType.VOID) return true;
+            if (compareType == EvalType.TYPELESS && requiredType != EvalType.VOID)
+            {
+                // Warn if warning is requested
+                return true;
+            }
+
+            if ((requiredType == EvalType.INT || requiredType == EvalType.FLOAT) &&
+                (compareType == EvalType.INT || compareType == EvalType.FLOAT))
+            {
+                return true;
+            }
+
+            return requiredType == compareType;
+        }
     }
 }
+

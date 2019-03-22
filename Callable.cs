@@ -8,7 +8,7 @@ namespace AutonoCy
 {
     abstract class Callable
     {
-        public abstract int arity { get; }
+        public abstract List<EvalType> paramTypes { get; }
         public abstract EvalType returnType { get; }
 
         public abstract TypedObject CALL(Interpreter interpreter, List<TypedObject> arguments);
@@ -16,29 +16,29 @@ namespace AutonoCy
 
     class ClockNativeFunction : Callable
     {
-        public override int arity { get; } = 0;
+        public override List<EvalType> paramTypes { get; } = new List<EvalType> { };
         public override EvalType returnType { get; } = EvalType.FLOAT;
 
         public override TypedObject CALL(Interpreter interpreter, List<TypedObject> arguments)
         {
-            return new TypedObject(EvalType.FLOAT, (double)DateTime.Now.TimeOfDay.TotalMilliseconds);
+            return new TypedObject(EvalType.FLOAT, (double)DateTime.Now.TimeOfDay.TotalMilliseconds, null);
         }
     }
 
     class InputNativeFunction : Callable
     {
-        public override int arity { get; } = 0;
+        public override List<EvalType> paramTypes { get; } = new List<EvalType> { };
         public override EvalType returnType { get; } = EvalType.STRING;
 
         public override TypedObject CALL(Interpreter interpreter, List<TypedObject> arguments)
         {
-            return new TypedObject(EvalType.STRING, Console.In.ReadLine());
+            return new TypedObject(EvalType.STRING, Console.In.ReadLine(), null);
         }
     }
 
     class StringToNumberNativeFunction : Callable
     {
-        public override int arity { get; } = 1;
+        public override List<EvalType> paramTypes { get; } = new List<EvalType> { EvalType.STRING };
         public override EvalType returnType { get; } = EvalType.FLOAT;
 
         public override TypedObject CALL(Interpreter interpreter, List<TypedObject> arguments)
@@ -47,12 +47,12 @@ namespace AutonoCy
             {
                 try
                 {
-                    return new TypedObject(EvalType.FLOAT, Double.Parse((string)arguments[0].value));
+                    return new TypedObject(EvalType.FLOAT, Double.Parse((string)arguments[0].value), null);
                 }
                 catch (FormatException e)
                 {
                     AutonoCy_Main.runtimeError(new RuntimeError(new Token(TokenType.IDENTIFIER, "stringToNumber", null, -1), "stringToNumber - Unexpected formatting"));
-                    return new TypedObject(EvalType.NIL, null);
+                    return new TypedObject(EvalType.NIL, null, null);
                 }
             }
             else
@@ -65,12 +65,24 @@ namespace AutonoCy
 
     class ToStringNativeFunction : Callable
     {
-        public override int arity { get; } = 1;
+        public override List<EvalType> paramTypes { get; } = new List<EvalType> { EvalType.TYPELESS };
         public override EvalType returnType { get; } = EvalType.STRING;
 
         public override TypedObject CALL(Interpreter interpreter, List<TypedObject> arguments)
         {
-            return new TypedObject(EvalType.STRING, arguments[0].value.ToString());
+            return new TypedObject(EvalType.STRING, arguments[0].GetValue().ToString(), null);
         }
+    }
+
+    class GetTypeNativeFunction : Callable
+    {
+        public override List<EvalType> paramTypes { get; } = new List<EvalType> { EvalType.TYPELESS };
+        public override EvalType returnType { get; } = EvalType.STRING;
+
+        public override TypedObject CALL(Interpreter interpreter, List<TypedObject> arguments)
+        {
+            return new TypedObject(EvalType.STRING, arguments[0].GetValue().varType.ToString(), null);
+        }
+
     }
 }

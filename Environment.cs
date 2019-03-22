@@ -9,7 +9,7 @@ namespace AutonoCy
     class Environment
     {
         public readonly Environment enclosing;
-        private readonly Dictionary<string, object> values = new Dictionary<string, object>();
+        private readonly Dictionary<string, TypedObject> values = new Dictionary<string, TypedObject>();
 
         public Environment()
         {
@@ -21,28 +21,35 @@ namespace AutonoCy
             this.enclosing = enclosing;
         }
 
-        public object getVar(Token name, bool isParsing = false, bool localOnly = false)
+        public TypedObject getVar(Token name, bool isParsing = false, bool localOnly = false)
         {
             if (values.ContainsKey(name.lexeme))
             {
-                return values[name.lexeme];
+                if (isParsing)
+                {
+                    return values[name.lexeme];
+                }
+                else
+                {
+                    return values[name.lexeme].GetValue();
+                }
             }
 
             if (enclosing != null && !localOnly) return enclosing.getVar(name, isParsing);
             
             if (isParsing)
             {
-                return null;
+                return new TypedObject(EvalType.NIL, null, null);
             }
             
             throw new RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
         }
 
-        public void assign(Token name, object value)
+        public void assign(Token name, TypedObject value)
         {
             if (values.ContainsKey(name.lexeme))
             {
-                values[name.lexeme] = value;
+                values[name.lexeme].SetValue(value, name);
                 return;
             }
 
@@ -55,7 +62,7 @@ namespace AutonoCy
             throw new RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
         }
 
-        public void define (Token name, object value, bool parsing = false, Parser parser = null)
+        public void define (Token name, TypedObject value, bool parsing = false, Parser parser = null)
         {
             // Check type before just allowing it to be overwritten
             if (values.ContainsKey(name.lexeme))

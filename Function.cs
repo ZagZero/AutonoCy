@@ -8,14 +8,17 @@ namespace AutonoCy
 {
     class Function : Callable
     {
-        public override int arity { get; }
+        public override List<EvalType> paramTypes { get; }
         public override EvalType returnType { get; }
 
         private readonly Stmt.Function declaration;
         public Function(Stmt.Function declaration)
         {
-            declaration.
-            arity = declaration.parameters.Count();
+            paramTypes = new List<EvalType>();
+            foreach (Parameter param in declaration.parameters)
+            {
+                paramTypes.Add(param.varType);
+            }
             this.declaration = declaration;
         }
 

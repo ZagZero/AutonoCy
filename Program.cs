@@ -9,12 +9,14 @@ namespace AutonoCy
     class AutonoCy_Main
     {
         private static Interpreter interpreter;
+        private static Parser parser;
         static bool hadError = false;
         static bool hadRuntimeError = false;
 
         static void Main(string[] args)
         {
             interpreter = new Interpreter();
+            parser = new Parser();
             if (args.Length > 1)
             {
                 Console.WriteLine("Usage: autonocy [script]");
@@ -64,9 +66,8 @@ namespace AutonoCy
             {
                 Console.WriteLine(token.toString());
             }*/
-
-            Parser parser = new Parser(tokens);
-            List<Stmt> statements = parser.parse();
+            List<Stmt> statements = new List<Stmt>();
+            statements = parser.parse(tokens);
 
             if (hadError) return;
 

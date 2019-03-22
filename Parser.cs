@@ -8,21 +8,25 @@ namespace AutonoCy
 {
     class Parser
     {
-        private readonly List<Token> tokens;
+        private List<Token> tokens;
         private int current = 0;
+        private EvalType returnType = EvalType.VOID;
 
         Environment environment;
         public readonly Environment globals = new Environment();
 
-        public Parser(List<Token> tokens)
+        public Parser()
         {
-            this.tokens = tokens;
 
             // Include globals to make sure parse step doesn't catch them as being missing
-            globals.define(native("clock"), EvalType.FLOAT);
-            globals.define(native("input"), EvalType.STRING);
-            globals.define(native("stringToNumber"), EvalType.FLOAT);
-            globals.define(native("toString"), EvalType.STRING);
+            globals.define(native("clock("), storeFun(EvalType.FLOAT, new List<Parameter> { }, null), true, this);
+            globals.define(native("input("), storeFun(EvalType.STRING, new List<Parameter> { }, null), true, this);
+            globals.define(native("stringToNumber("), storeFun(EvalType.FLOAT, 
+                new List<Parameter> { new Parameter(EvalType.STRING, new Token(TokenType.NIL, "", "", -1)) }, null), true, this);
+            globals.define(native("toString("), storeFun(EvalType.STRING, 
+                new List<Parameter> { new Parameter(EvalType.TYPELESS, new Token(TokenType.NIL, "", "", -1)) }, null), true, this);
+            globals.define(native("getType("), storeFun(EvalType.STRING,
+                new List<Parameter> { new Parameter(EvalType.STRING, new Token(TokenType.NIL, "", "", -1)) }, null), true, this);
             environment = new Environment(globals);
         }
 
@@ -31,22 +35,27 @@ namespace AutonoCy
             return new Token(TokenType.IDENTIFIER, name, null, -1);
         }
 
-        private TypedObject storeVar(EvalType type)
+        private TypedObject storeVar(EvalType type, Token token)
         {
-            return new TypedObject(type, null);
+            return new TypedObject(type, null, token, true);
         }
 
-        private TypedObject storeFun(EvalType type, List<Parameter> parameters)
+        private TypedObject storeFun(EvalType type, List<Parameter> parameters, Token token)
         {
-            return new TypedObject(type, parameters);
+            if (token == null)
+            {
+                token = new Token(TokenType.FUN, "Globals", null, -1);
+            }
+            return new TypedObject(type, parameters, token, true);
         }
 
-        public List<Stmt> parse()
+        public List<Stmt> parse(List<Token> tokens)
         {
+            this.tokens = tokens;
             List<Stmt> statements = new List<Stmt>();
+            current = 0;
             while (!isAtEnd())
             {
-                environment = new Environment();
                 statements.Add(declaration());
             }
 
@@ -57,9 +66,8 @@ namespace AutonoCy
         {
             try
             {
-                if (match(TokenType.FUN)) return function("function");
-                if (match(TokenType.VOID)) return function("function");
-                if (match(TokenType.INT, TokenType.FLOAT, TokenType.STRING, TokenType.BOOL, TokenType.VAR))
+                if (match(TokenType.FUN, TokenType.VOID)) return function("function");
+                if (match(TokenType.INT, TokenType.FLOAT, TokenType.STR, TokenType.BOOL, TokenType.VAR))
                     return varDeclaration();
                 return statement();
             }
@@ -76,7 +84,7 @@ namespace AutonoCy
             Token typeHold = previous();
             // Check if the next token provides a type, given that the triggering one isn't VOID 
             if (typeHold.type != TokenType.VOID && match(TokenType.INT, TokenType.FLOAT, 
-                TokenType.BOOL, TokenType.STRING, TokenType.VOID))
+                TokenType.BOOL, TokenType.STR, TokenType.VOID))
             {
                 // Set the typeHold token to the matched token
                 typeHold = previous();
@@ -98,10 +106,10 @@ namespace AutonoCy
             // Check to make sure the next token isn't the closing parenthesis
             if (!check(TokenType.RIGHT_PAREN))
             {
-                // Loop for every following comma
+                // Loop for every following comma.er
                 do
                 {
-                    // Hold on to the comma token for error-reporting purposes
+                    // Hold on to the comma or parenthesis token for error-reporting purposes
                     Token last = previous();
                     // Arbitrarily set the max parameters to 16
                     if (parameters.Count() >= 16)
@@ -109,14 +117,14 @@ namespace AutonoCy
                         error(peek(), "Cannot have more than 16 parameters.");
                     }
                     // Check for types that indicate a declaration
-                    if (match(TokenType.INT, TokenType.FLOAT, TokenType.STRING, TokenType.BOOL, TokenType.VAR))
+                    if (match(TokenType.INT, TokenType.FLOAT, TokenType.STR, TokenType.BOOL, TokenType.VAR))
                     {
                         // Get the type of the parameter
                         Token varType = previous();
                         // Look for an identifier
                         Token paramName = consume(TokenType.IDENTIFIER, "Expected parameter name after '" + varType.lexeme + "'.");
                         // Add to the parameters list (each needs a name token and a type (EvalType))
-                        parameters.Add(new Parameter(tokenToEvalType(varType.type), name));
+                        parameters.Add(new Parameter(tokenToEvalType(varType.type), paramName));
                     }
                     // Didn't have a declaration after a comma
                     else { throw error(last, "Expect parameter declaration after '" + last.lexeme + "'."); }
@@ -127,8 +135,12 @@ namespace AutonoCy
 
             // Look for opening brace
             consume(TokenType.LEFT_BRACE, "Expect '{' before " + kind + " body.");
-            environment.define(new Token(name.type, name.lexeme + "(", name.literal, name.line), storeFun(tokenToEvalType(typeHold.type), parameters), true, this);
+            environment.define(new Token(name.type, name.lexeme + "(", name.literal, name.line), 
+                storeFun(tokenToEvalType(typeHold.type), parameters, name), true, this);
+            EvalType previousReturn = returnType;
+            returnType = tokenToEvalType(typeHold.type);
             List<Stmt> body = block(parameters);
+            returnType = previousReturn;
             return new Stmt.Function(name, parameters, body, tokenToEvalType(typeHold.type));
         }
 
@@ -143,12 +155,12 @@ namespace AutonoCy
             Expr initializer = null;
             if (match(TokenType.EQUAL))
             {
+                initializer = expression();
                 if (!matchingEvalTypes(tokenToEvalType(typeHold.type), initializer.evalType))
                 {
                     error(previous(), "Cannot assign type '" + initializer.evalType.ToString() +
-                        "' to variable '" + name.lexeme + "' of type '" + tokenToEvalType(typeHold.type).ToString());
+                        "' to variable '" + name.lexeme + "' of type '" + tokenToEvalType(typeHold.type).ToString() + "'.");
                 }
-                initializer = expression();
             }
 
             if (match(TokenType.LEFT_PAREN) && typeHold.type != TokenType.VAR)
@@ -163,19 +175,19 @@ namespace AutonoCy
             switch (typeHold.type)
             {
                 case TokenType.BOOL:
-                    environment.define(name, storeVar(EvalType.BOOL), true, this);
+                    environment.define(name, storeVar(EvalType.BOOL, name), true, this);
                     return new Stmt.Bool(name, initializer);
                 case TokenType.FLOAT:
-                    environment.define(name, storeVar(EvalType.FLOAT), true, this);
+                    environment.define(name, storeVar(EvalType.FLOAT, name), true, this);
                     return new Stmt.Float(name, initializer);
                 case TokenType.INT:
-                    environment.define(name, storeVar(EvalType.INT), true, this);
+                    environment.define(name, storeVar(EvalType.INT, name), true, this);
                     return new Stmt.Int(name, initializer);
-                case TokenType.STRING:
-                    environment.define(name, storeVar(EvalType.STRING), true, this);
+                case TokenType.STR:
+                    environment.define(name, storeVar(EvalType.STRING, name), true, this);
                     return new Stmt.String(name, initializer);
                 case TokenType.VAR:
-                    environment.define(name, storeVar(EvalType.TYPELESS), true, this);
+                    environment.define(name, storeVar(EvalType.TYPELESS, name), true, this);
                     return new Stmt.Var(name, initializer);
                 default:
                     throw error(typeHold, "Unhandled type, interpreter shouldn't let this happen.");
@@ -234,7 +246,7 @@ namespace AutonoCy
                 body = new Stmt.Block(new List<Stmt> { body, new Stmt.Expression(increment)});
             }
 
-            if (condition == null) condition = new Expr.Literal(true, EvalType.BOOL);
+            if (condition == null) condition = new Expr.Literal(true, EvalType.BOOL, previous());
             body = new Stmt.While(condition, body);
 
             if (initializer != null)
@@ -247,7 +259,7 @@ namespace AutonoCy
 
         private Stmt ifStatement()
         {
-            consume(TokenType.LEFT_PAREN, "Expect 'C' after 'if'.");
+            consume(TokenType.LEFT_PAREN, "Expect '(' after 'if'.");
             Expr condition = expression();
             consume(TokenType.RIGHT_PAREN, "Expect ')' after if condition.");
 
@@ -292,11 +304,26 @@ namespace AutonoCy
             Expr value = null;
             if (!check(TokenType.SEMICOLON))
             {
+                if (returnType == EvalType.VOID)
+                {
+                    throw error(keyword, "Invalid return: cannot return value with function type 'VOID'.");
+                }
                 value = expression();
+                if (!matchingEvalTypes(returnType, value.evalType))
+                {
+                    error(keyword, "Invalid return type: expecting '" + returnType.ToString() + "', received '" + value.evalType + "'.");
+                }
+            }
+            else
+            {
+                if (returnType != EvalType.VOID && returnType != EvalType.TYPELESS)
+                {
+                    error(keyword, "Invalid return: must return a value of type '" + returnType.ToString() + "'.");
+                }
             }
 
             consume(TokenType.SEMICOLON, "Expect ';' after return value.");
-            return new Stmt.Return(keyword, value);
+            return new Stmt.Return(keyword, value, returnType);
         }
 
         private List<Stmt> block(List<Parameter> addToScope = null)
@@ -308,7 +335,7 @@ namespace AutonoCy
             {
                 foreach (Parameter p in addToScope)
                 {
-                    environment.define(p.name, storeVar(p.varType), true, this);
+                    environment.define(p.name, storeVar(p.varType, null), true, this);
                 }
             }
 
@@ -344,7 +371,7 @@ namespace AutonoCy
                     if (!matchingEvalTypes(type.varType, value.evalType))
                     {
                         error(equals, "Cannot assign type '" + value.evalType.ToString() +
-                        "' to variable '" + name.lexeme + "' of type '" + type.varType.ToString());
+                        "' to variable '" + name.lexeme + "' of type '" + type.varType.ToString() + "'.");
                     }
                     return new Expr.Assign(name, value, value.evalType);
                 }
@@ -465,25 +492,53 @@ namespace AutonoCy
 
             while (match(TokenType.MINUS, TokenType.PLUS))
             {
+                bool exprHandled = false;
                 Token op = previous();
                 Expr right = multiplication();
-                if (!matchingEvalTypes(EvalType.FLOAT, expr.evalType))
+                if (op.type == TokenType.PLUS)
                 {
-                    error(op, "Unexpected type '" + expr.evalType.ToString()
-                        + "' for binary operator '" + op.lexeme + "'; use 'INT' or 'FLOAT'.");
-                }
-                if (!matchingEvalTypes(EvalType.FLOAT, right.evalType))
-                {
-                    error(op, "Unexpected type '" + right.evalType.ToString()
-                        + "' for binary operator '" + op.lexeme + "'; use 'INT' or 'FLOAT'.");
-                }
+                    if (right.evalType == EvalType.TYPELESS && expr.evalType == EvalType.TYPELESS)
+                    {
+                        expr = new Expr.Binary(expr, op, right, EvalType.TYPELESS);
+                        exprHandled = true;
+                    }
+                    if (expr.evalType == EvalType.STRING || right.evalType == EvalType.STRING)
+                    {
+                        if (matchingEvalTypes(EvalType.STRING, expr.evalType) && matchingEvalTypes(EvalType.STRING, right.evalType))
+                        {
+                            expr = new Expr.Binary(expr, op, right, EvalType.STRING);
+                        }
+                        else
+                        {
+                            error(op, "Unexpected type '" + expr.evalType.ToString()
+                                + "' and '" + right.evalType.ToString() + "' for string concatenation '" 
+                                + op.lexeme + "'; both must be type 'STRING'.");
+                        }
+                        exprHandled = true;
+                    }
 
-                EvalType eval = EvalType.FLOAT;
-                if (expr.evalType == EvalType.INT && right.evalType == EvalType.INT)
-                {
-                    eval = EvalType.INT;
                 }
-                expr = new Expr.Binary(expr, op, right, eval);
+                if (!exprHandled)
+                {
+                    if (!matchingEvalTypes(EvalType.FLOAT, expr.evalType))
+                    {
+                        error(op, "Unexpected type '" + expr.evalType.ToString()
+                            + "' for binary operator '" + op.lexeme + "'; use 'INT' or 'FLOAT'.");
+                    }
+                    if (!matchingEvalTypes(EvalType.FLOAT, right.evalType))
+                    {
+                        error(op, "Unexpected type '" + right.evalType.ToString()
+                            + "' for binary operator '" + op.lexeme + "'; use 'INT' or 'FLOAT'.");
+                    }
+
+                    EvalType eval = EvalType.FLOAT;
+                    if (expr.evalType == EvalType.INT && right.evalType == EvalType.INT)
+                    {
+                        eval = EvalType.INT;
+                    }
+                    expr = new Expr.Binary(expr, op, right, eval);
+
+                }
             }
 
             return expr;
@@ -580,13 +635,13 @@ namespace AutonoCy
 
         private Expr primary()
         {
-            if (match(TokenType.FALSE)) return new Expr.Literal(false, EvalType.BOOL);
-            if (match(TokenType.TRUE)) return new Expr.Literal(true, EvalType.BOOL);
-            if (match(TokenType.NIL)) return new Expr.Literal(null, EvalType.NIL);
+            if (match(TokenType.FALSE)) return new Expr.Literal(false, EvalType.BOOL, previous());
+            if (match(TokenType.TRUE)) return new Expr.Literal(true, EvalType.BOOL, previous());
+            if (match(TokenType.NIL)) return new Expr.Literal(null, EvalType.NIL, previous());
 
             if (match(TokenType.INTEGER, TokenType.FLOAT_L, TokenType.STRING))
             {
-                return new Expr.Literal(previous().literal, tokenToEvalType(previous().type));
+                return new Expr.Literal(previous().literal, tokenToEvalType(previous().type), previous());
             }
 
             if (match(TokenType.IDENTIFIER))
@@ -595,17 +650,17 @@ namespace AutonoCy
                 Token name = previous();
                 if (match(TokenType.LEFT_PAREN))
                 {
-                    if (environment.getVar(new Token(name.type, name.lexeme + "(", name.literal, name.line), true) == null)
+                    if (environment.getVar(new Token(name.type, name.lexeme + "(", name.literal, name.line), true).varType == EvalType.NIL)
                     {
-                        error(name, "Function '" + name.lexeme + "' not defined.");
+                        throw error(name, "Function '" + name.lexeme + "' not defined.");
                     }
                     type = (TypedObject)environment.getVar(new Token(name.type, name.lexeme + "(", name.literal, name.line), true);
                     // TODO: Fix bodged fix for forcing name to be a part of the function instead of allowing currying and complex callees
-                    return finishCall(new Expr.Variable(previous(), type.varType), (List<Parameter>)type.value);
+                    return finishCall(new Expr.Variable(name, type.varType), (List<Parameter>)type.value);
                 }
-                if (environment.getVar(name, true) == null)
+                if (environment.getVar(name, true).varType == EvalType.NIL)
                 {
-                    error(name, "Variable '" + name.lexeme + "' not defined.");
+                   error(name, "Variable '" + name.lexeme + "' not defined.");
                 }
                 type = (TypedObject)environment.getVar(name, true);
                 return new Expr.Variable(previous(), type.varType);
@@ -669,8 +724,8 @@ namespace AutonoCy
             {
                 if (!matchingEvalTypes(parameters[i].varType, arguments[i].evalType))
                 {
-                    error(((Expr.Variable)callee).name, "Argument " + i.ToString() + " type mismatch: expecting '" +
-                        parameters[i].varType.ToString() + "', received '" + arguments[i].evalType.ToString());
+                    error(((Expr.Variable)callee).name, "Argument " + (i + 1).ToString() + " type mismatch: expecting '" +
+                        parameters[i].varType.ToString() + "', received '" + arguments[i].evalType.ToString() + "'.");
                 }
             }
 

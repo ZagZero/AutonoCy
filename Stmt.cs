@@ -149,9 +149,10 @@ namespace AutonoCy
 			public readonly Expr initializer;
 		}
 		public class Return : Stmt {
-			public Return(Token keyword, Expr value) {
+			public Return(Token keyword, Expr value, EvalType returnType) {
 				this.keyword = keyword;
 				this.value = value;
+                this.returnType = returnType;
 			}
 
 
@@ -160,6 +161,7 @@ namespace AutonoCy
 			}
 			public readonly Token keyword;
 			public readonly Expr value;
+            public readonly EvalType returnType;
 		}
 		public class Var : Stmt {
 			public Var(Token name, Expr initializer) {

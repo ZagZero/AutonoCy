@@ -68,8 +68,9 @@ namespace AutonoCy
 			public readonly Expr expression;
 		}
 		public class Literal : Expr {
-			public Literal(object value, EvalType evalType) : base(evalType) {
+			public Literal(object value, EvalType evalType, Token origin) : base(evalType) {
 				this.value = value;
+                this.origin = origin;
 			}
 
 
@@ -77,6 +78,7 @@ namespace AutonoCy
 				return visitor.visitLiteralExpr(this);
 			}
 			public readonly object value;
+            public readonly Token origin;
 		}
 		public class Logical : Expr {
 			public Logical(Expr left, Token op, Expr right, EvalType evalType) : base(evalType) {

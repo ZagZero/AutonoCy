@@ -1,27 +1,33 @@
 // Main declarations
-var menuInput;
-var currencySelect1 = "0";
-var currencySelect2 = "0";
+string menuInput;
+int currencySelect1 = 0;
+int currencySelect2 = 0;
 var valueIn;
-var valueResult;
-var goodMenuInput = false;
-var numCurrencies = 0;
-var currencySelectNum = 0;
+float valueResult;
+bool goodMenuInput = false;
+int numCurrencies = 0;
+int currencySelectNum = 0;
 
 // Exchange rate declarations (currency to USD)
-var DOGE_exch = 0.006443; // Dogecoin
-var MITH_exch = 0.268804; // Mithiril
-var USDT_exch = 0.999939; // Tether
-var LTC_exch = 55.14; // Litecoin
+float DOGE_exch = 0.006443; // Dogecoin
+float MITH_exch = 0.268804; // Mithiril
+float USDT_exch = 0.999939; // Tether
+float LTC_exch = 55.14; // Litecoin
 
-fun checkNumRange(inputString, minOpt, maxOpt) {
-	for (var i = minOpt; i < maxOpt; i = i + 1) {
+fun bool checkNumRange(string inputString, int minOpt, int maxOpt) {
+	for (var i = minOpt; i <= maxOpt; i = i + 1) {
 		if (inputString == toString(i)) {
 			return true;
 		}
 	}
 	return false;
 }
+
+fun string test (var a, var b) {
+	return 1 == 2;
+}
+
+checkNumRange("Hi", "Hello", 3);
 
 while(!goodMenuInput) {
 	// Print main menu and get option
@@ -41,128 +47,130 @@ while(!goodMenuInput) {
 	}
 }
 
-if (menuInput != "4") {
-	// Set number of currencies to be selected based on the initial menu input
-	if (menuInput == "3") { numCurrencies = 2; }
-	else { numCurrencies = 1; }
-	
-	// Loop until numCurrencies has been decremented to 0
-	while (numCurrencies > 0) {
-		// Print crypto prompt depending on conversion option selected
-		if (menuInput == "1") {
+if (menuInput == "4") {
+	return;
+}
+// Set number of currencies to be selected based on the initial menu input
+if (menuInput == "3") { numCurrencies = 2; }
+else { numCurrencies = 1; }
+
+// Loop until numCurrencies has been decremented to 0
+while (numCurrencies > 0) {
+	// Print crypto prompt depending on conversion option selected
+	if (menuInput == "1") {
+		print "Select crypto to convert to:";
+		currencySelectNum = 2;
+	}
+	if (menuInput == "2") {
+		print "Select crypto to convert from:";
+		currencySelectNum = 1;
+	}
+	if (menuInput == "3") {
+		// Crypto prompt for currency to currency prompts twice, differently
+		if (numCurrencies == 2) {
+			print "Select crypto to convert from:";
+			currencySelectNum = 1;
+		} else {
 			print "Select crypto to convert to:";
 			currencySelectNum = 2;
 		}
-		if (menuInput == "2") {
-			print "Select crypto to convert from:";
-			currencySelectNum = 1;
-		}
-		if (menuInput == "3") {
-			// Crypto prompt for currency to currency prompts twice, differently
-			if (numCurrencies == 2) {
-				print "Select crypto to convert from:";
-				currencySelectNum = 1;
-			} else {
-				print "Select crypto to convert to:";
-				currencySelectNum = 2;
-			}
-		}
-		
-		// Print crypto select menu (same for any option)
-		print "    [1] Dogecoin (DOGE)";
-		print "    [2] Mithiril (MITH)";
-		print "    [3] Tether (USDT)";
-		print "    [4] Litecoin (LTC)";
-		
-		// Assign option depending on what the currency select num is
-		if (currencySelectNum == 1) {
-			currencySelect1 = input();
-			goodMenuInput = checkNumRange(currencySelect1, 1, 4);
-		} else {
-			currencySelect2 = input();
-			goodMenuInput = checkNumRange(currencySelect2, 1, 4);
-		}
-		
-		// If the input isn't valid, output error
-		if (!goodMenuInput) {
-			print "\nError: invalid input";
-		} else {
-			// Decrement numCurrencies
-			numCurrencies = numCurrencies - 1;
-		}
 	}
 	
-	// Prompt for starting amount
-	var addendum;
-	if (currencySelect1 == "0") { addendum = "in dollars";	}
-	if (currencySelect1 == "1") { addendum = "in Dogecoin"; }
-	if (currencySelect1 == "2") { addendum = "in Mithiril"; }
-	if (currencySelect1 == "3") { addendum = "in Tether"; }
-	if (currencySelect1 == "4") { addendum = "in Litecoin"; }
+	// Print crypto select menu (same for any option)
+	print "    [1] Dogecoin (DOGE)";
+	print "    [2] Mithiril (MITH)";
+	print "    [3] Tether (USDT)";
+	print "    [4] Litecoin (LTC)";
 	
-	print "Enter amount to convert from " + addendum + ":";
-	while (valueIn != nil) {
-		valueIn = stringToNumber(input());
-		if (valueIn == nil) { print "Bad formatting, try again"; }
-	}
-	
-	if (valueIn < 0) {
-		print "\nConverted negative input to positive.";
-		valueIn = valueIn * -1;
+	// Assign option depending on what the currency select num is
+	if (currencySelectNum == 1) {
+		currencySelect1 = stringToNumber(input()) + 0.5;
+		goodMenuInput = currencySelect1 >= 1 and currencySelect1 <= 4;
+	} else {
+		currencySelect2 = stringToNumber(input()) + 0.5;
+		goodMenuInput = currencySelect2 >= 1 and currencySelect2 <= 4;
 	}
 	
-	// Convert valueIn to USD if needed and create the start of the output
-	var printPhrase;
-	if (currencySelect1 == "0") { 
-		printPhrase = "\n$" + toString(valueIn);
-		// Already in USD
+	// If the input isn't valid, output error
+	if (!goodMenuInput) {
+		print "\nError: invalid input";
+	} else {
+		// Decrement numCurrencies
+		numCurrencies = numCurrencies - 1;
 	}
-	if (currencySelect1 == "1") { 
-		printPhrase = "\n" + toString(valueIn) + " Dogecoin (DOGE)";
-		valueIn = valueIn * DOGE_exch;
-	}
-	if (currencySelect1 == "2") { 
-		printPhrase = "\n" + toString(valueIn) + " Mithiril (MITH)"; 
-		valueIn = valueIn * MITH_exch;
-	}
-	if (currencySelect1 == "3") {
-		printPhrase = "\n" + toString(valueIn) + " Tether (USDT)";
-		valueIn = valueIn * USDT_exch;
-	}
-	if (currencySelect1 == "4") {
-		printPhrase = "\n" + toString(valueIn) + " Litecoin (LTC)";
-		valueIn = valueIn * LTC_exch;
-	}
-	
-	printPhrase = printPhrase + " is worth ";
-	
-	// Convert to target crypto and output result appropriately
-	if (currencySelect2 == "0") { // U.S. Dollars (already been converted)
-		valueResult = valueIn;
-		printPhrase = printPhrase + "$" + toString(valueResult) + "\n";
-	}
-	if (currencySelect2 == "1") { // Dogecoin
-		valueResult = valueIn / DOGE_exch;
-		printPhrase = printPhrase + toString(valueResult) + " Dogecoin (DOGE)\n";
-	}
-	if (currencySelect2 == "2") { // Mithiril
-		valueResult = valueIn / MITH_exch;
-		printPhrase = printPhrase + toString(valueResult) + " Mithiril (MITH)\n";
-	}
-	if (currencySelect2 == "3") { // Tether
-		valueResult = valueIn / USDT_exch;
-		printPhrase = printPhrase + toString(valueResult) + " Tether (USDT)\n";
-	}
-	if (currencySelect2 == "4") { // Litecoin
-		valueResult = valueIn / LTC_exch;
-		printPhrase = printPhrase + toString(valueResult) + " Litecoin (LTC)\n";
-	}
-	
-	// Print the built phrase
-	print printPhrase;
-} else {
-	print "Exiting";
 }
+
+// Prompt for starting amount
+string addendum;
+if (currencySelect1 == "0") { addendum = "in dollars";	}
+if (currencySelect1 == "1") { addendum = "in Dogecoin"; }
+if (currencySelect1 == "2") { addendum = "in Mithiril"; }
+if (currencySelect1 == "3") { addendum = "in Tether"; }
+if (currencySelect1 == "4") { addendum = "in Litecoin"; }
+
+print "Enter amount to convert from " + addendum + ":";
+while (valueIn == nil) {
+	
+	valueIn = input();
+	valueIn = stringToNumber(valueIn);
+	if (valueIn == nil) { print "Bad formatting, try again"; }
+}
+
+if (valueIn < 0) {
+	print "\nConverted negative input to positive.";
+	valueIn = valueIn * -1;
+}
+
+// Convert valueIn to USD if needed and create the start of the output
+string printPhrase;
+if (currencySelect1 == 0) { 
+	printPhrase = "\n$" + toString(valueIn);
+	// Already in USD
+}
+if (currencySelect1 == 1) { 
+	printPhrase = "\n" + toString(valueIn) + " Dogecoin (DOGE)";
+	valueIn = valueIn * DOGE_exch;
+}
+if (currencySelect1 == 2) { 
+	printPhrase = "\n" + toString(valueIn) + " Mithiril (MITH)"; 
+	valueIn = valueIn * MITH_exch;
+}
+if (currencySelect1 == 3) {
+	printPhrase = "\n" + toString(valueIn) + " Tether (USDT)";
+	valueIn = valueIn * USDT_exch;
+}
+if (currencySelect1 == 4) {
+	printPhrase = "\n" + toString(valueIn) + " Litecoin (LTC)";
+	valueIn = valueIn * LTC_exch;
+}
+
+printPhrase = printPhrase + " is worth ";
+
+// Convert to target crypto and output result appropriately
+if (currencySelect2 == 0) { // U.S. Dollars (already been converted)
+	valueResult = valueIn;
+	printPhrase = printPhrase + "$" + toString(valueResult) + "\n";
+}
+if (currencySelect2 == 1) { // Dogecoin
+	valueResult = valueIn / DOGE_exch;
+	printPhrase = printPhrase + toString(valueResult) + " Dogecoin (DOGE)\n";
+}
+if (currencySelect2 == 2) { // Mithiril
+	valueResult = valueIn / MITH_exch;
+	printPhrase = printPhrase + toString(valueResult) + " Mithiril (MITH)\n";
+}
+if (currencySelect2 == 3) { // Tether
+	valueResult = valueIn / USDT_exch;
+	printPhrase = printPhrase + toString(valueResult) + " Tether (USDT)\n";
+}
+if (currencySelect2 == 4) { // Litecoin
+	valueResult = valueIn / LTC_exch;
+	printPhrase = printPhrase + toString(valueResult) + " Litecoin (LTC)\n";
+}
+
+// Print the built phrase
+print printPhrase;
+
 print "Press return to exit...";
 input();		
 	

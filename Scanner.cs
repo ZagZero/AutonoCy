@@ -48,6 +48,7 @@ namespace AutonoCy
             keywords.Add("this", TokenType.THIS);
             keywords.Add("true", TokenType.TRUE);
             keywords.Add("var", TokenType.VAR);
+            keywords.Add("void", TokenType.VOID);
             keywords.Add("while", TokenType.WHILE);
         }
 
